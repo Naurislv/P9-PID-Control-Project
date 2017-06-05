@@ -31,13 +31,13 @@ void PID::Init(double Kp, double Ki, double Kd, double Kcte, double Ksteer, doub
     _dp.resize(3); // koefficients for PID controller
     _dp2.resize(3); // koefficients for PID controller
 
-    _dp[0] = 0.0035; // position coefficient
-    _dp[1] = 0.00035; // integral coefficient
-    _dp[2] = 0.025; // differential coefficient
+    _dp[0] = 0.0008632; // position coefficient
+    _dp[1] = 0.000129; // integral coefficient
+    _dp[2] = 0.00921; // differential coefficient
 
-    _dp2[0] = 0.084; // differential coefficient
-    _dp2[1] = 0.11; // differential coefficient
-    _dp2[2] = 0.139; // differential coefficient
+    _dp2[0] = 0.0565; // CTE coefficient
+    _dp2[1] = 0.03316; // speed coefficient
+    _dp2[2] = 0.0343; // angle coefficient
 
     start_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 }
