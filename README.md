@@ -21,7 +21,7 @@ double PID::Predict_steer(){
 }
 ```
 
-To also control speed another 'PID' like the controller is created which also consists of three parts. Current speed, Current Steering angle, and CTE.
+To also control speed another PID like controller is created which also consists of three parts. Current speed, Current Steering angle, and CTE.
 
 Speed PID controller:
 
@@ -48,6 +48,8 @@ Notice 0.1 in the formula. With this parameter, it is possible to set safety whi
 ```
 speed_sum += speed_error * (1 / (fabs(cte) + 0.1)) / 100;
 ```
+
+Results are quite good. Some parameters are changed to fit Project Specifications - car must drive what is considered to be safe for human driver, so there shouldn't be much fluctuations around trajectory which was achieved with solid average speed. When I tested without such constraints I was able to get more than >90 speed and even better average speed in track.
 
 ## Dependencies
 
