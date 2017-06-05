@@ -1,3 +1,4 @@
+#include <vector>
 #include <uWS/uWS.h>
 #include <iostream>
 #include "json.hpp"
@@ -11,6 +12,21 @@ using json = nlohmann::json;
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
+
+// Frame counter for twiddling
+int nFrames = 0;
+
+int step0 = 0;
+int step1 = 0;
+int i0 = 0;
+int i1 = 0;
+int c = 0;
+
+double err0 = 0;
+double best_err0 = std::numeric_limits<double>::infinity();
+double best_err0_prev = 0;
+double err1 = 0;
+double best_err1 = std::numeric_limits<double>::infinity();
 
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
@@ -28,12 +44,21 @@ std::string hasData(std::string s) {
   return "";
 }
 
+void reset_simulator(uWS::WebSocket<uWS::SERVER>& ws)
+{
+    // reset
+    std::string msg("42[\"reset\", {}]");
+    ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+}
+
 int main()
 {
   uWS::Hub h;
 
   PID pid;
   // TODO: Initialize the pid variable.
+  // Kp, Ki, Kd, Kcte, Ksteer, K speed -->
+  pid.Init(0.07287, 0.002918, 1.1244, 0.365, 0.185, 0.15);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -51,22 +76,71 @@ int main()
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
           double steer_value;
+          double speed_value;
+
           /*
           * TODO: Calcuate steering value here, remember the steering value is
           * [-1, 1].
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
-          
+
+
+          pid.UpdateError(cte, speed, angle);
+          steer_value = pid.Predict_steer();
+          speed_value = pid.Predict_throttle();
+
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          std::cout << " speed_sum " << pid.speed_sum << " cte_sum " << pid.cte_sum << " best_err0 "
+                    << best_err0 << " best_err1 " << best_err1 << "  CTE " << cte << " throttle "
+                    << speed_value << "  angle " << angle << "  Frame " << nFrames << " steering "
+                    << steer_value << "  dt  " << pid.dt <<  std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = speed_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+          if (fabs(cte) > 4.5 or nFrames == 1150 or nFrames == 0) {
+              reset_simulator(ws);
+              pid.i_error = 0;
+
+              err0 = pid.cte_sum;
+              err1 = - pid.speed_sum;
+
+              std::cout << "\n\nerr0  " << err0 << '\n';
+              std::cout << "err1  " << err1 << '\n';
+              std::cout << "distance component  " << - pid.speed_sum << '\n';
+              std::cout << "cte component  " << pid.cte_sum << '\n';
+
+              pid.Twiddle(step0, i0, err0, best_err0, pid._p, pid._dp);
+              pid.Twiddle(step1, i1, err1, best_err1, pid._p2, pid._dp2);
+
+              // As speed increases, CTE_sum will become bigger, so if
+              // steering best_err is not same for 6 tries, reset it to current
+              // err
+              if (best_err0 == best_err0_prev) {
+                  c += 1;
+              } else {
+                  c = 0;
+              }
+
+              std::cout << "c  " << c << '\n';
+              if (c == 8) {
+                  best_err0 = err0;
+                  c = 0;
+              }
+
+              nFrames = 0;
+              best_err0_prev = best_err0;
+
+              unsigned int microseconds = 1000000;
+              usleep(microseconds);
+          }
+
+          nFrames += 1;
         }
       } else {
         // Manual driving
