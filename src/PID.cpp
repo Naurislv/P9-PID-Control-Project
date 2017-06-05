@@ -31,13 +31,13 @@ void PID::Init(double Kp, double Ki, double Kd, double Kcte, double Ksteer, doub
     _dp.resize(3); // koefficients for PID controller
     _dp2.resize(3); // koefficients for PID controller
 
-    _dp[0] = 0.005; // position coefficient
-    _dp[1] = 0.0005; // integral coefficient
-    _dp[2] = 0.05; // differential coefficient
+    _dp[0] = 0.0035; // position coefficient
+    _dp[1] = 0.00035; // integral coefficient
+    _dp[2] = 0.025; // differential coefficient
 
-    _dp2[0] = 0.053; // differential coefficient
-    _dp2[1] = 0.007; // differential coefficient
-    _dp2[2] = 0.012; // differential coefficient
+    _dp2[0] = 0.084; // differential coefficient
+    _dp2[1] = 0.11; // differential coefficient
+    _dp2[2] = 0.139; // differential coefficient
 
     start_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 }
@@ -58,7 +58,7 @@ void PID::UpdateError(double cte, double speed_value, double angle_value) {
     milliseconds current_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     dt = current_time.count() - start_time.count();
 
-    speed_sum += speed_error * (1 / (fabs(cte) + 0.5)) / 100;
+    speed_sum += speed_error * (1 / (fabs(cte) + 0.1)) / 100;
     cte_sum += cte * cte;
 }
 

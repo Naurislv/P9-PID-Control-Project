@@ -14,17 +14,17 @@ double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
 // Frame counter for twiddling
-int nFrames = 0;
+bool TWIDDLE = false;
 
+int nFrames = 0;
 int step0 = 0;
 int step1 = 0;
 int i0 = 0;
 int i1 = 0;
-int c = 0;
+int cte_time = 0;
 
 double err0 = 0;
 double best_err0 = std::numeric_limits<double>::infinity();
-double best_err0_prev = 0;
 double err1 = 0;
 double best_err1 = std::numeric_limits<double>::infinity();
 
@@ -58,7 +58,7 @@ int main()
   PID pid;
   // TODO: Initialize the pid variable.
   // Kp, Ki, Kd, Kcte, Ksteer, K speed -->
-  pid.Init(0.07287, 0.002918, 1.1244, 0.365, 0.185, 0.15);
+  pid.Init(0.08, 0.0034, 1.22, 0.24, 0.708, 0.40);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -103,41 +103,44 @@ int main()
           //std::cout << msg << std::endl;
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
-          if (fabs(cte) > 4.5 or nFrames == 1150 or nFrames == 0) {
-              reset_simulator(ws);
-              pid.i_error = 0;
-
-              err0 = pid.cte_sum;
-              err1 = - pid.speed_sum;
-
-              std::cout << "\n\nerr0  " << err0 << '\n';
-              std::cout << "err1  " << err1 << '\n';
-              std::cout << "distance component  " << - pid.speed_sum << '\n';
-              std::cout << "cte component  " << pid.cte_sum << '\n';
-
-              pid.Twiddle(step0, i0, err0, best_err0, pid._p, pid._dp);
-              pid.Twiddle(step1, i1, err1, best_err1, pid._p2, pid._dp2);
-
-              // As speed increases, CTE_sum will become bigger, so if
-              // steering best_err is not same for 6 tries, reset it to current
-              // err
-              if (best_err0 == best_err0_prev) {
-                  c += 1;
+          if (TWIDDLE) {
+              if (fabs(cte) > 4.5) {
+                  cte_time += 1;
               } else {
-                  c = 0;
+                  cte_time = 0;
               }
 
-              std::cout << "c  " << c << '\n';
-              if (c == 8) {
-                  best_err0 = err0;
-                  c = 0;
+              if (cte_time > 2 or nFrames == 1150 or nFrames == 0) {
+                  reset_simulator(ws);
+                  pid.i_error = 0;
+
+                  err0 = pid.cte_sum;
+                  err1 = - pid.speed_sum;
+
+                  if (nFrames != 1150) {
+                      err0 = pid.cte_sum + 5000;
+                  }
+
+                  std::cout << "\n\nerr0  " << err0 << '\n';
+                  std::cout << "err1  " << err1 << '\n';
+                  std::cout << "distance component  " << - pid.speed_sum << '\n';
+                  std::cout << "cte component  " << pid.cte_sum << '\n';
+
+
+                  pid.Twiddle(step0, i0, err0, best_err0, pid._p, pid._dp);
+                  pid.Twiddle(step1, i1, err1, best_err1, pid._p2, pid._dp2);
+
+                  best_err0 += fabs(best_err0) * 0.003;
+                  best_err1 += fabs(best_err1) * 0.003;
+
+                  nFrames = 0;
+
+                  unsigned int microseconds = 1000000;
+                  usleep(microseconds);
               }
-
-              nFrames = 0;
-              best_err0_prev = best_err0;
-
-              unsigned int microseconds = 1000000;
-              usleep(microseconds);
+          } else {
+              pid.cte_sum = 0;
+              pid.speed_sum = 0;
           }
 
           nFrames += 1;
