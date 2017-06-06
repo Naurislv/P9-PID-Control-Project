@@ -58,7 +58,7 @@ int main()
   PID pid;
   // TODO: Initialize the pid variable.
   // Kp, Ki, Kd, Kcte, Ksteer, K speed -->
-  pid.Init(0.090298, 0.0034298, 1.538, 0.239206, 0.413927, 0.514466);
+  pid.Init(0.0903263, 0.00382164, 1.52058, 0.101334, 0.621985, 0.481924);
 
   h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -129,9 +129,6 @@ int main()
 
                   pid.Twiddle(step0, i0, err0, best_err0, pid._p, pid._dp);
                   pid.Twiddle(step1, i1, err1, best_err1, pid._p2, pid._dp2);
-
-                  best_err0 += fabs(best_err0) * 0.003;
-                  best_err1 += fabs(best_err1) * 0.003;
 
                   nFrames = 0;
 

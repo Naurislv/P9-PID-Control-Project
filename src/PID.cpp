@@ -31,13 +31,13 @@ void PID::Init(double Kp, double Ki, double Kd, double Kcte, double Ksteer, doub
     _dp.resize(3); // koefficients for PID controller
     _dp2.resize(3); // koefficients for PID controller
 
-    _dp[0] = 0.0008632; // position coefficient
-    _dp[1] = 0.000129; // integral coefficient
-    _dp[2] = 0.00921; // differential coefficient
+    _dp[0] = 0.0001355; // position coefficient
+    _dp[1] = 0.0000452; // integral coefficient
+    _dp[2] = 0.001183; // differential coefficient
 
-    _dp2[0] = 0.0565; // CTE coefficient
-    _dp2[1] = 0.03316; // speed coefficient
-    _dp2[2] = 0.0343; // angle coefficient
+    _dp2[0] = 0.01959; // CTE coefficient
+    _dp2[1] = 0.025667; // speed coefficient
+    _dp2[2] = 0.03245; // angle coefficient
 
     start_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
 }
@@ -58,7 +58,7 @@ void PID::UpdateError(double cte, double speed_value, double angle_value) {
     milliseconds current_time = duration_cast< milliseconds >(system_clock::now().time_since_epoch());
     dt = current_time.count() - start_time.count();
 
-    speed_sum += speed_error * (1 / (fabs(cte) + 0.1)) / 100;
+    speed_sum += speed_error * (1 / (fabs(cte) + 0.05)) / 100;
     cte_sum += cte * cte;
 }
 
@@ -93,6 +93,7 @@ void PID::Twiddle(int& step, int& i, double& err, double& best_err,
         } else {
             p[i] -= 2 * dp[i];
             step = 2;
+            best_err += fabs(best_err) * 0.0075;
         }
     } else if (step == 2){
         if (err < best_err) {
@@ -101,6 +102,7 @@ void PID::Twiddle(int& step, int& i, double& err, double& best_err,
         } else {
             p[i] += dp[i];
             dp[i] *= 0.9;
+            best_err += fabs(best_err) * 0.0075;
         }
 
         step = 1;
